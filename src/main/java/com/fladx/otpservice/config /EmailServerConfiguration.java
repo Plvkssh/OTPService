@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 
 @Configuration
-public class MailEmulatorConfig {
+public class EmailServerConfiguration {
 
     @Bean(initMethod = "start", destroyMethod = "stop")
     public GreenMail greenMail() {
