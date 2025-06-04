@@ -1,11 +1,19 @@
-HELP.md
+# ===============================================
+# Git Ignore Template for Java/Spring Boot Project
+# ===============================================
+
+# Gradle Build System
+# -------------------
 .gradle
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
+!gradle/wrapper/gradle-wrapper.jar  # Исключение: необходимый wrapper файл
+!**/src/main/**/build/  # Исключение: build в main src
+!**/src/test/**/build/  # Исключение: build в test src
 
-### STS ###
+# IDE Specific Files
+# ------------------
+
+# Spring Tool Suite (STS)
 .apt_generated
 .classpath
 .factorypath
@@ -17,8 +25,8 @@ bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
-### IntelliJ IDEA ###
-.idea
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -26,12 +34,35 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
+# VS Code
 .vscode/
+
+# System Files
+# ------------
+.DS_Store
+Thumbs.db
+
+# Log Files
+# ---------
+*.log
+logs/
+
+# Temp Files
+# ----------
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Build Output
+# ------------
+target/
+lib/
+dist/
