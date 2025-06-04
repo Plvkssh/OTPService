@@ -1,66 +1,79 @@
 package com.fladx.otpservice.config;
 
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.smpp.Connection;
-import org.smpp.Session;
-import org.smpp.TCPIPConnection;
-import org.smpp.pdu.BindRequest;
-import org.smpp.pdu.BindResponse;
-import org.smpp.pdu.BindTransmitter;
-import org.smpp.pdu.SubmitSM;
+import org.smpp.*;
+import org.smpp.pdu.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Configuration
-public class SmppEmulatorConfig {
+public class SmsGatewayConfig {
 
-    @Value("${smpp.host}")
-    private String host;
-
+    @Value("${smpp.host}") 
+    private String smppServerHost;
+    
     @Value("${smpp.port}")
-    private int port;
-
+    private int smppServerPort;
+    
     @Value("${smpp.system_id}")
-    private String systemId;
-
+    private String smppLogin;
+    
     @Value("${smpp.password}")
-    private String password;
-
+    private String smppPassword;
+    
     @Value("${smpp.system_type}")
     private String systemType;
+    
+    @Value("${smpp.source_addr}") 
+    private String senderPhone;
 
-    @Value("${smpp.source_addr}")
-    private String sourceAddr;
-
+    /**
+     * Настраивает соединение с SMPP-сервером для отправки SMS.
+     * Если что-то пойдет не так - вернет null и запишет в лог ошибку.
+     */
     @Bean
     public Session smppSession() {
+        log.info("Пытаемся подключиться к SMPP серверу {}:{}", smppServerHost, smppServerPort);
+        
         try {
-            Connection connection = new TCPIPConnection(host, port);
+            // 1. Устанавливаем соединение
+            Connection connection = new TCPIPConnection(smppServerHost, smppServerPort);
             Session session = new Session(connection);
-            BindRequest bindRequest = new BindTransmitter();
-            bindRequest.setSystemId(systemId);
-            bindRequest.setPassword(password);
-            bindRequest.setSystemType(systemType);
-            bindRequest.setInterfaceVersion((byte) 0x34);
-            bindRequest.setAddressRange(sourceAddr);
 
-            BindResponse bindResponse = session.bind(bindRequest);
-            if (bindResponse.getCommandStatus() != 0) {
-                throw new Exception("Bind failed: " + bindResponse.getCommandStatus());
+            // 2. Настраиваем запрос на подключение
+            BindRequest authRequest = createAuthRequest();
+            
+            // 3. Пытаемся авторизоваться
+            BindResponse response = session.bind(authRequest);
+            
+            if (!isSuccess(response)) {
+                throw new RuntimeException("Не удалось подключиться: код ошибки " + response.getCommandStatus());
             }
-
+            
+            log.info("Успешно подключились к SMPP серверу");
             return session;
-        }
 
-        catch (Exception exception){
-            log.error("Cant create smppSession", exception);
+        } catch (Exception e) {
+            log.error("Ошибка при подключении к SMPP: {}", e.getMessage());
+            return null;
         }
-
-        return null;
     }
 
+    // Создает запрос авторизации с нашими учетными данными
+    private BindRequest createAuthRequest() {
+        BindRequest request = new BindTransmitter();
+        request.setSystemId(smppLogin);
+        request.setPassword(smppPassword);
+        request.setSystemType(systemType);
+        request.setInterfaceVersion((byte) 0x34);
+        request.setAddressRange(senderPhone);
+        return request;
+    }
 
+    // Проверяет успешность подключения
+    private boolean isSuccess(BindResponse response) {
+        return response.getCommandStatus() == 0;
+    }
 }
