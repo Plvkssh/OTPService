@@ -4,25 +4,22 @@ import com.fladx.otpservice.dto.otp.GenerateCodeRequestDto;
 import com.fladx.otpservice.dto.otp.ValidateCodeRequestDto;
 import com.fladx.otpservice.service.otp.OtpService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/otp")
+@RequiredArgsConstructor
 public class OtpController {
-
     private final OtpService otpService;
-
     @PostMapping
-    public String generateOtpCode(@RequestBody GenerateCodeRequestDto req) {
-        return otpService.generateOtpCode(req);
+    public String sendOtpCode(@RequestBody GenerateCodeRequestDto request) {
+        return otpService.generateOtpCode(request);
     }
 
     @PostMapping("/validate")
-    public void validateOtpCode(@RequestBody ValidateCodeRequestDto req) {
-        otpService.validateCode(req);
+    public void checkOtpCode(@RequestBody ValidateCodeRequestDto request) {
+        // Если код неверный - сервис сам выбросит ошибку
+        otpService.validateCode(request);
     }
 }
