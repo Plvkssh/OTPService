@@ -6,65 +6,93 @@ import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.WebRequest;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Ловит все ошибки в приложении и возвращает аккуратные ответы.
+ * Как хороший врач - ставит диагноз (HTTP-статус) и объясняет проблему.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Когда искомый объект не найден в базе (404)
+     */
     @ExceptionHandler(EntityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ErrorResponse handleEntityNotFoundException(EntityNotFoundException exception, WebRequest request) {
-        return buildErrorMessage(exception, request);
+    public ErrorResponse handleNotFound(EntityNotFoundException ex, WebRequest request) {
+        return buildError(ex, request);
     }
 
+    /**
+     * Когда OTP-код уже недействителен (410)
+     * - Просрочен
+     * - Уже использован
+     */
     @ExceptionHandler({OtpCodeNotActiveException.class, OtpCodeExpiredException.class})
     @ResponseStatus(HttpStatus.GONE)
-    public ErrorResponse OtpCodeNotActiveException(Exception exception, WebRequest request) {
-        return buildErrorMessage(exception, request);
+    public ErrorResponse handleInvalidOtpCode(Exception ex, WebRequest request) {
+        return buildError(ex, request);
     }
 
+    /**
+     * Когда пытаемся создать дубликат (400)
+     * - Пользователь с таким email уже есть
+     */
     @ExceptionHandler(EntityExistsException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleEntityNotFoundException(EntityExistsException exception, WebRequest request) {
-        return buildErrorMessage(exception, request);
+    public ErrorResponse handleAlreadyExists(EntityExistsException ex, WebRequest request) {
+        return buildError(ex, request);
     }
 
+    /**
+     * Когда данные в запросе не прошли проверку (400)
+     * - Неверный формат email
+     * - Слишком короткий пароль
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleValidationException(MethodArgumentNotValidException exception, WebRequest request) {
-        List<ErrorField> validationErrors = exception.getBindingResult()
+    public ErrorResponse handleInvalidData(MethodArgumentNotValidException ex, WebRequest request) {
+        List<ErrorField> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> new ErrorField(error.getField(), error.getDefaultMessage()))
-                .collect(Collectors.toList());
+                .map(error -> new ErrorField(
+                    error.getField(), 
+                    error.getDefaultMessage())
+                )
+                .toList();
 
         return ErrorResponse.builder()
-                .message("Validation failed")
-                .path(getPath(request))
-                .details(validationErrors)
+                .message("Некорректные данные в запросе")
+                .path(getRequestPath(request))
+                .details(errors)
                 .build();
     }
 
-    @ExceptionHandler({Exception.class, RuntimeException.class})
+    /**
+     * Все остальные непредвиденные ошибки (500)
+     * - Сюда попадает всё, что мы не предусмотрели
+     */
+    @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handleRedirectException(Exception exception, WebRequest request) {
-        return buildErrorMessage(exception, request);
+    public ErrorResponse handleUnexpectedErrors(Exception ex, WebRequest request) {
+        return buildError(ex, request);
     }
 
-    private ErrorResponse buildErrorMessage(Exception exception, WebRequest request) {
+    // Собирает стандартный ответ об ошибке
+    private ErrorResponse buildError(Exception ex, WebRequest request) {
         return ErrorResponse.builder()
-                .message(exception.getMessage())
-                .path(getPath(request))
+                .message(ex.getMessage())
+                .path(getRequestPath(request))
                 .build();
     }
 
-    private String getPath(WebRequest request) {
+    // Извлекает путь запроса из WebRequest
+    private String getRequestPath(WebRequest request) {
         return request.getDescription(false).replace("uri=", "");
     }
 }
