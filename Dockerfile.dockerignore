@@ -1,7 +1,6 @@
-# Ignore everything by default
+# Игнорировать всё по умолчанию
 *
-
-# Include what we need
+# Разрешить только необходимое
 !**/src
 !gradle
 !**/*.gradle
